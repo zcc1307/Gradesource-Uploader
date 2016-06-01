@@ -16,8 +16,9 @@
 
 
 # Static config
-login="INSERTLOGINHERE"
-courseID="INSERTCOURSEIDHERE"
+#login="shuangsong_cse250c"
+login="chz038"
+courseID="28123"
 
 #Grabs the assignment ID
 cd ./upload

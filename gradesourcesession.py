@@ -6,6 +6,11 @@
 from bs4 import BeautifulSoup
 import re, requests
 import csv
+import inspect
+
+
+def email_resol(s):
+    return s.replace("eng.ucsd", "ucsd")
 
 class GradesourceSession:
     #'global' cookies and session for method uses
@@ -52,6 +57,10 @@ class GradesourceSession:
             for k,v in scoreDict.items():
                 if (v == "0"):
                     scoreDict[k] = ""
+        
+        
+        scoreDict = dict(( email_resol(name), val) for name, val in scoreDict.iteritems())    
+                    
         print(scoreDict)
         print("CSV Converted")
         self.s = s
@@ -102,6 +111,9 @@ class GradesourceSession:
             else:
                 value = float(v)
             maxScore = float(maximumScore) 
+            
+            #print maxScore
+            
             if(value > maxScore):
                 # Throw warning, incase someone has a score of 11/10. Therefore they're not recorded
                 print(k + " has a score of " + v + " which is larger than the maximum score of " + maximumScore)
@@ -111,24 +123,71 @@ class GradesourceSession:
         nomnomsoup = BeautifulSoup(html)
         updatePOSTDict = {}
         updateIDDict = {}
-
-        for x in nomnomsoup.form('input', id = re.compile("^student")):
+        
+        #inspect.getfile(nomnomsoup.form)
+        fa = nomnomsoup.find_all('input')
+        
+        for i in range(3,len(fa)-1,3):
+            x = fa[i]
+            #print str(x)
+            #for x in nomnomsoup.find_all('input', id = re.compile("^student")):
             # Grabs the student Number
+            print x
             studentNumber = re.compile('input id="(.*)" name=')
             studentString = studentNumber.search(str(x))
-            studStr = studentString.group(1).strip()
+            
             # Grabs the gradesource Number
-            gradesourceNumber = re.compile('type="hidden" value="(.*)">')
+            x = fa[i+1]
+            #print str(x)
+            gradesourceNumber = re.compile('value="(.*)"')
             gradesourceString = gradesourceNumber.search(str(x))
+            
+            print x
+            idNumber = re.compile('input name="(.*)" t')
+            idString = idNumber.search(str(x))
+            print idString.group(1)
+            
+            #print '---------'
+            #print '---------'
+            #print studentNumber
+            #print studentString
+            
+            #print '---------'
+            #print gradesourceNumber
+            #print gradesourceString
+            
+            
+            if gradesourceString is None or studentString is None or idString is None:
+                continue  
+                
+            studStr = studentString.group(1).strip()
             gradStr = gradesourceString.group(1).strip()
+            print studStr, gradStr
+            
             updatePOSTDict[studStr] = gradStr
             # Grabs the id Number
-            idNumber = re.compile('input name="id(.*)" type="hidden"')
-            idString = idNumber.search(str(x))
-            updateIDDict[str("id" + idString.group(1).strip())] = gradStr
+
+            print idString.group(1).strip()
+            updateIDDict[str(idString.group(1).strip())] = gradStr
+            
+            
+        print "updatePOSTDict = "    
+        print updatePOSTDict
+        print "updateIDDict = "      
+        print updateIDDict
+        print "scoreDict = "  
+        print scoreDict
+        print "savedAccount = "  
+        print self.savedAccount
+        
         # Some Innerjoin magic? yay for SQL concepts!
         joinedDictA = {}
         saveAccount = self.savedAccount
+        
+        
+        
+        
+        
         #InnerJoin saveAccount (gradesourceNumber, email) and scoreDict (email, score) to (gradesourceNumber, score)
         for key in saveAccount.keys():
             try:
@@ -136,6 +195,8 @@ class GradesourceSession:
             except Exception, e:
                 print(saveAccount[key] + " was found in Gradesource but not in the CSV.")
                 continue
+        print 'joineddictA='
+        print joinedDictA
 
         joinedDictB = {}
         #InnerJoin updatePOSTDict(studStr, gradesourceNumber) and joinedDictA(gradesourceNumber, score) to (studStr, score)
@@ -147,6 +208,10 @@ class GradesourceSession:
                 continue
         # Combines (studStr, score), (id, gradesource Number), (assessmentId, assignmentNumber), and (studentCount, count.length) for updatescores1.asp as 
         # thats what it requires
+        print 'joineddictB='
+        print joinedDictB
+        
+        
         joinedDictB.update(updateIDDict)
         joinedDictB['assessmentId'] = field
         joinedDictB['studentCount'] = len(saveAccount)
@@ -182,6 +247,7 @@ class GradesourceSession:
                 # Grabs the student Email
                 studentEmail = tr.contents[7].text.strip()
                 studentEmail = studentEmail.encode('ascii')
+                studentEmail = email_resol(studentEmail)
                 # Grabs the student PID
                 studentPID = tr.contents[3].text.strip()
                 studentPID = studentPID.encode('ascii')
