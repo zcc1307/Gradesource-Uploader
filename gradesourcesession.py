@@ -127,31 +127,26 @@ class GradesourceSession:
         #inspect.getfile(nomnomsoup.form)
         fa = nomnomsoup.find_all('input')
         
+        
+        #for x in nomnomsoup.find_all('input', id = re.compile("^student")):
         for i in range(3,len(fa)-1,3):
-            x = fa[i]
-            #print str(x)
-            #for x in nomnomsoup.find_all('input', id = re.compile("^student")):
+            
             # Grabs the student Number
-            print x
             studentNumber = re.compile('input id="(.*)" name=')
-            studentString = studentNumber.search(str(x))
+            studentString = studentNumber.search(str(fa[i]))
             
             # Grabs the gradesource Number
-            x = fa[i+1]
-            #print str(x)
             gradesourceNumber = re.compile('value="(.*)"')
-            gradesourceString = gradesourceNumber.search(str(x))
+            gradesourceString = gradesourceNumber.search(str(fa[i+1]))
             
-            print x
             idNumber = re.compile('input name="(.*)" t')
-            idString = idNumber.search(str(x))
-            print idString.group(1)
+            idString = idNumber.search(str(fa[i+1]))
             
+            #print idString.group(1)
             #print '---------'
             #print '---------'
             #print studentNumber
-            #print studentString
-            
+            #print studentString            
             #print '---------'
             #print gradesourceNumber
             #print gradesourceString
@@ -162,32 +157,27 @@ class GradesourceSession:
                 
             studStr = studentString.group(1).strip()
             gradStr = gradesourceString.group(1).strip()
-            print studStr, gradStr
+            #print studStr, gradStr
             
             updatePOSTDict[studStr] = gradStr
             # Grabs the id Number
 
-            print idString.group(1).strip()
             updateIDDict[str(idString.group(1).strip())] = gradStr
             
             
-        print "updatePOSTDict = "    
-        print updatePOSTDict
-        print "updateIDDict = "      
-        print updateIDDict
-        print "scoreDict = "  
-        print scoreDict
-        print "savedAccount = "  
-        print self.savedAccount
+        #print "updatePOSTDict = "    
+        #print updatePOSTDict
+        #print "updateIDDict = "      
+        #print updateIDDict
+        #print "scoreDict = "  
+        #print scoreDict
+        #print "savedAccount = "  
+        #print self.savedAccount
         
         # Some Innerjoin magic? yay for SQL concepts!
         joinedDictA = {}
         saveAccount = self.savedAccount
-        
-        
-        
-        
-        
+         
         #InnerJoin saveAccount (gradesourceNumber, email) and scoreDict (email, score) to (gradesourceNumber, score)
         for key in saveAccount.keys():
             try:
@@ -195,8 +185,20 @@ class GradesourceSession:
             except Exception, e:
                 print(saveAccount[key] + " was found in Gradesource but not in the CSV.")
                 continue
-        print 'joineddictA='
-        print joinedDictA
+           
+        f = open('not_in_gradesource.csv', 'wb')        
+        writer = csv.writer(f)
+        fieldnames = ['Email', 'Score']
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+      
+        for key in scoreDict.keys():
+            if key not in saveAccount.values():
+                print(key + " was found in CSV but not in the Gradesource, who has a score of " + scoreDict[key])
+                writer.writerow({'Email': key, 'Score': scoreDict[key]})
+                
+                
+        #print 'joineddictA='
+        #print joinedDictA
 
         joinedDictB = {}
         #InnerJoin updatePOSTDict(studStr, gradesourceNumber) and joinedDictA(gradesourceNumber, score) to (studStr, score)
@@ -208,8 +210,8 @@ class GradesourceSession:
                 continue
         # Combines (studStr, score), (id, gradesource Number), (assessmentId, assignmentNumber), and (studentCount, count.length) for updatescores1.asp as 
         # thats what it requires
-        print 'joineddictB='
-        print joinedDictB
+        #print 'joineddictB='
+        #print joinedDictB
         
         
         joinedDictB.update(updateIDDict)
